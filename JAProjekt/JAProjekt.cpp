@@ -88,17 +88,16 @@ void JAProjekt::onMakeButtonClicked()
 		
 		Bitmap bmp(fileInPathString);
 
-		if ((bmp.bmpInfoHeaderOut.width * bmp.bmpInfoHeaderOut.height * bmp.bmpInfoHeaderOut.bit_count / 8) < bmp.data.max_size())
-		{
-			if (bmp.bmpInfoHeader.bit_count == 24)
-			{
-				bmp.asmOrCpp = ui.radioButtonCpp->isChecked();
 
-				bmp.write(fileOutPathString, scaleX, scaleY, bmp.asmOrCpp, threads);
-				
+		if (bmp.bmpInfoHeader.bit_count == 24)
+		{
+			bmp.asmOrCpp = ui.radioButtonCpp->isChecked();
+
+			if(bmp.write(fileOutPathString, scaleX, scaleY, bmp.asmOrCpp, threads))
+			{
 				double timeTaken = 0.0;
-				
-				if(bmp.asmOrCpp == true)
+
+				if (bmp.asmOrCpp == true)
 					timeTaken = std::chrono::duration_cast<std::chrono::microseconds>(bmp.endCpp - bmp.beginCpp).count();
 				else
 					timeTaken = std::chrono::duration_cast<std::chrono::microseconds>(bmp.endAsm - bmp.beginAsm).count();
@@ -107,11 +106,10 @@ void JAProjekt::onMakeButtonClicked()
 				time = QString::number(timeTaken);
 			}
 			else
-				QMessageBox::warning(this, "Warning", "Nalezy wybrac bitmape 24 bitowa");
+				QMessageBox::warning(this, "Warning", "Za duzy plik wynikowy! Prosze zmniejszyc skale");
 		}
-
 		else
-			QMessageBox::warning(this, "Warning", "Za duzy rozmiar");
+			QMessageBox::warning(this, "Warning", "Nalezy wybrac bitmape 24 bitowa");
 	}
 	else
 		QMessageBox::warning(this, "Warning", "Nalezy wybrac plik z rozszerzeniem .bmp !");

@@ -93,65 +93,69 @@ void Bitmap::read(std::string fname)
 	inp.close();
 }
 
-void Bitmap::write(std::string fname, unsigned int scaleX, unsigned int scaleY, bool asmOrCpp, unsigned int threads)
+bool Bitmap::write(std::string fname, unsigned int scaleX, unsigned int scaleY, bool asmOrCpp, unsigned int threads)
 {
 	fileHeaderOut = fileHeader;
 	bmpInfoHeaderOut = bmpInfoHeader;
 	bmpColorHeaderOut = bmpColorHeader;
-	setHeaderOut(scaleX, scaleY);
-
-	nearestNeighbourHandling(threads);
 	
-	std::ofstream of{ fname, std::ios_base::binary };
-	
-	if (of) 
+	if(setHeaderOut(scaleX, scaleY))
 	{
-		if (bmpInfoHeaderOut.bit_count == 32)
+		nearestNeighbourHandling(threads);
+
+		std::ofstream of{ fname, std::ios_base::binary };
+
+		if (of)
 		{
-			writeHeadersAndData(of);
-		}
-		else if (bmpInfoHeaderOut.bit_count == 24)
-		{
-			if (bmpInfoHeaderOut.width % 4 == 0)
+			if (bmpInfoHeaderOut.bit_count == 32)
 			{
 				writeHeadersAndData(of);
 			}
-			else 
+			else if (bmpInfoHeaderOut.bit_count == 24)
 			{
-				uint32_t new_stride = makeStrideAligned(4);
-				std::vector<uint8_t> padding_row(new_stride - rowStride);
-
-				for(auto i : padding_row)
+				if (bmpInfoHeaderOut.width % 4 == 0)
 				{
-					i = 0x00;
+					writeHeadersAndData(of);
 				}
-				
-				writeHeaders(of);
-
-				for (int y = 0; y < bmpInfoHeaderOut.height; ++y) 
+				else
 				{
-					of.write((const char*)(dataOut.data() + rowStride * y), rowStride);
-					of.write((const char*)padding_row.data(), padding_row.size());
+					uint32_t new_stride = makeStrideAligned(4);
+					std::vector<uint8_t> padding_row(new_stride - rowStride);
+
+					for (auto i : padding_row)
+					{
+						i = 0x00;
+					}
+
+					writeHeaders(of);
+
+					for (int y = 0; y < bmpInfoHeaderOut.height; ++y)
+					{
+						of.write((const char*)(dataOut.data() + rowStride * y), rowStride);
+						of.write((const char*)padding_row.data(), padding_row.size());
+					}
 				}
 			}
+			else
+			{
+				throw std::runtime_error("The program can treat only 24 or 32 bits per pixel BMP files");
+			}
 		}
-		else 
-		{
-			throw std::runtime_error("The program can treat only 24 or 32 bits per pixel BMP files");
-		}
-	}
 
-	of.close();
+		of.close();
+		return true;
+	}
+	
+	return false;
 }
 
-void Bitmap::setHeaderOut(unsigned int scaleX, unsigned int scaleY)
+bool Bitmap::setHeaderOut(unsigned int scaleX, unsigned int scaleY)
 {
 	bmpInfoHeaderOut.width = bmpInfoHeader.width * scaleX / 100.0;
 	bmpInfoHeaderOut.height = bmpInfoHeader.height * scaleY / 100.0;
 
-	if(bmpInfoHeaderOut.width * bmpInfoHeaderOut.height * bmpInfoHeaderOut.bit_count / 8 < data.max_size())
+	if(!checkIfTooBig())
 	{
-		//for now file size is header size
 		fileHeaderOut.file_size = fileHeaderOut.offset_data;
 
 		if (bmpInfoHeaderOut.height < 0)
@@ -170,7 +174,18 @@ void Bitmap::setHeaderOut(unsigned int scaleX, unsigned int scaleY)
 
 			fileHeaderOut.file_size += static_cast<uint32_t>(dataOut.size()) + bmpInfoHeaderOut.height * static_cast<uint32_t>(padding_row.size());
 		}
+		return true;
 	}
+	
+	return false;
+}
+
+bool Bitmap::checkIfTooBig()
+{
+	if ((bmpInfoHeaderOut.width * bmpInfoHeaderOut.height * bmpInfoHeaderOut.bit_count / 8) < data.max_size())
+		return false;
+	
+	return true;
 }
 
 void Bitmap::checkColorHeader(BMPColorHeader& bmpColorHeader)

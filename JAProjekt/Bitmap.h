@@ -101,14 +101,19 @@ public:
 	/// <param name="scaleX">Width scale od new file</param>
 	/// <param name="scaleY">Height scale od new file</param>
 	/// <param name="scaleY">This parameter says if user chose ASM or C++ DLL library</param>
-	/// <param name="asmOrCpp"Information if user chose ASM or C++ DLL library></param>
+	/// <param name="asmOrCpp">Information if user chose ASM or C++ DLL library></param>
 	/// <param name="threads">Number of threads chosen by user</param>
-    void write(std::string fname, unsigned int scaleX, unsigned int scaleY, bool asmOrCpp, unsigned int threads);
+	/// <returns>If file can be written</returns>
+    bool write(std::string fname, unsigned int scaleX, unsigned int scaleY, bool asmOrCpp, unsigned int threads);
 
     /// <summary>Function responsible for setting header in output file</summary>
     /// <param name="scaleX">width scale od new file</param>
     /// <param name="scaleY">height scale od new file</param>
-    void setHeaderOut(unsigned int scaleX, unsigned int scaleY);
+    /// <returns>If file can be written</returns>
+    bool setHeaderOut(unsigned int scaleX, unsigned int scaleY);
+
+    /// <summary>Function checks if file is too big</summary>
+    bool checkIfTooBig();
 
 private:
     uint32_t rowStride{ 0 };    //line of pixmap
