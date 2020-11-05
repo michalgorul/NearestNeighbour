@@ -9,6 +9,10 @@
 #include <QPixmap>
 #include <string>
 #include <Windows.h>
+#include <algorithm>
+#include <QTextCodec>
+
+#define Q(txt) QString::fromWCharArray(L##txt)
 
 class JAProjekt : public QWidget
 {
@@ -26,6 +30,7 @@ public:
 	
     /// <summary>Function sets atributes scaleX, scaleY and threads taken from GUI</summary>
     void getScaleAndThreads();
+
 private:
     Ui::JAProjektClass ui;
 
@@ -40,7 +45,7 @@ private:
     unsigned int scaleY = 0;
     unsigned int threads = 1;
 
-    QString time;
+    QString time;       //in here ill store execution time ready to display in GUI
 	
 	// filter in dialog window while choosing file
     const QString filter = "BitMap (*.bmp)";

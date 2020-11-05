@@ -29,8 +29,6 @@ public:
     QPushButton *makeButton;
     QLabel *label_1;
     QLabel *label_2;
-    QLineEdit *lineEditX;
-    QLineEdit *lineEditY;
     QLabel *label_3;
     QLabel *label_4;
     QLabel *label;
@@ -46,6 +44,9 @@ public:
     QLineEdit *fileOutlineEdit;
     QLineEdit *lineEditTime;
     QLabel *label_9;
+    QSpinBox *scaleXSpinBox;
+    QSpinBox *scaleYSpinBox;
+    QLabel *howManyThreads;
 
     void setupUi(QWidget *JAProjektClass)
     {
@@ -65,43 +66,37 @@ public:
         makeButton = new QPushButton(JAProjektClass);
         makeButton->setObjectName(QString::fromUtf8("makeButton"));
         makeButton->setEnabled(false);
-        makeButton->setGeometry(QRect(230, 360, 231, 28));
+        makeButton->setGeometry(QRect(230, 370, 231, 28));
         label_1 = new QLabel(JAProjektClass);
         label_1->setObjectName(QString::fromUtf8("label_1"));
-        label_1->setGeometry(QRect(300, 240, 55, 16));
+        label_1->setGeometry(QRect(290, 235, 55, 16));
         label_2 = new QLabel(JAProjektClass);
         label_2->setObjectName(QString::fromUtf8("label_2"));
-        label_2->setGeometry(QRect(300, 270, 55, 16));
-        lineEditX = new QLineEdit(JAProjektClass);
-        lineEditX->setObjectName(QString::fromUtf8("lineEditX"));
-        lineEditX->setGeometry(QRect(350, 240, 61, 22));
-        lineEditY = new QLineEdit(JAProjektClass);
-        lineEditY->setObjectName(QString::fromUtf8("lineEditY"));
-        lineEditY->setGeometry(QRect(350, 270, 61, 22));
+        label_2->setGeometry(QRect(290, 265, 55, 16));
         label_3 = new QLabel(JAProjektClass);
         label_3->setObjectName(QString::fromUtf8("label_3"));
-        label_3->setGeometry(QRect(413, 243, 55, 16));
+        label_3->setGeometry(QRect(405, 235, 55, 16));
         label_4 = new QLabel(JAProjektClass);
         label_4->setObjectName(QString::fromUtf8("label_4"));
-        label_4->setGeometry(QRect(413, 272, 55, 16));
+        label_4->setGeometry(QRect(405, 265, 55, 16));
         label = new QLabel(JAProjektClass);
         label->setObjectName(QString::fromUtf8("label"));
         label->setGeometry(QRect(190, 710, 101, 20));
         threadsSpinBox = new QSpinBox(JAProjektClass);
         threadsSpinBox->setObjectName(QString::fromUtf8("threadsSpinBox"));
-        threadsSpinBox->setGeometry(QRect(360, 330, 42, 22));
+        threadsSpinBox->setGeometry(QRect(360, 320, 42, 22));
         threadsSpinBox->setMinimum(1);
         threadsSpinBox->setMaximum(64);
         label_6 = new QLabel(JAProjektClass);
         label_6->setObjectName(QString::fromUtf8("label_6"));
-        label_6->setGeometry(QRect(270, 330, 91, 16));
+        label_6->setGeometry(QRect(270, 320, 91, 16));
         radioButtonAsm = new QRadioButton(JAProjektClass);
         radioButtonAsm->setObjectName(QString::fromUtf8("radioButtonAsm"));
-        radioButtonAsm->setGeometry(QRect(370, 300, 95, 20));
+        radioButtonAsm->setGeometry(QRect(370, 293, 95, 20));
         radioButtonAsm->setChecked(true);
         radioButtonCpp = new QRadioButton(JAProjektClass);
         radioButtonCpp->setObjectName(QString::fromUtf8("radioButtonCpp"));
-        radioButtonCpp->setGeometry(QRect(240, 300, 95, 20));
+        radioButtonCpp->setGeometry(QRect(240, 293, 95, 20));
         radioButtonCpp->setChecked(false);
         label_5 = new QLabel(JAProjektClass);
         label_5->setObjectName(QString::fromUtf8("label_5"));
@@ -145,6 +140,23 @@ public:
         label_9 = new QLabel(JAProjektClass);
         label_9->setObjectName(QString::fromUtf8("label_9"));
         label_9->setGeometry(QRect(95, 200, 511, 20));
+        scaleXSpinBox = new QSpinBox(JAProjektClass);
+        scaleXSpinBox->setObjectName(QString::fromUtf8("scaleXSpinBox"));
+        scaleXSpinBox->setGeometry(QRect(340, 233, 61, 22));
+        scaleXSpinBox->setMinimum(1);
+        scaleXSpinBox->setMaximum(10000);
+        scaleXSpinBox->setSingleStep(1);
+        scaleXSpinBox->setValue(100);
+        scaleYSpinBox = new QSpinBox(JAProjektClass);
+        scaleYSpinBox->setObjectName(QString::fromUtf8("scaleYSpinBox"));
+        scaleYSpinBox->setGeometry(QRect(340, 263, 61, 22));
+        scaleYSpinBox->setMinimum(1);
+        scaleYSpinBox->setMaximum(10000);
+        scaleYSpinBox->setSingleStep(1);
+        scaleYSpinBox->setValue(100);
+        howManyThreads = new QLabel(JAProjektClass);
+        howManyThreads->setObjectName(QString::fromUtf8("howManyThreads"));
+        howManyThreads->setGeometry(QRect(265, 343, 201, 20));
 
         retranslateUi(JAProjektClass);
         QObject::connect(exitButton, SIGNAL(clicked()), JAProjektClass, SLOT(close()));
@@ -161,8 +173,6 @@ public:
         makeButton->setText(QCoreApplication::translate("JAProjektClass", "Skaluj", nullptr));
         label_1->setText(QCoreApplication::translate("JAProjektClass", "Skala X:", nullptr));
         label_2->setText(QCoreApplication::translate("JAProjektClass", "Skala Y:", nullptr));
-        lineEditX->setText(QCoreApplication::translate("JAProjektClass", "100", nullptr));
-        lineEditY->setText(QCoreApplication::translate("JAProjektClass", "100", nullptr));
         label_3->setText(QCoreApplication::translate("JAProjektClass", "%", nullptr));
         label_4->setText(QCoreApplication::translate("JAProjektClass", "%", nullptr));
         label->setText(QCoreApplication::translate("JAProjektClass", "Czas wykonania:", nullptr));
@@ -174,6 +184,7 @@ public:
         label_8->setText(QCoreApplication::translate("JAProjektClass", "Micha\305\202 G\303\263ral gr. 2  ", nullptr));
         fileOutButton->setText(QCoreApplication::translate("JAProjektClass", "\305\232cie\305\274ka pliku wynikowego", nullptr));
         label_9->setText(QCoreApplication::translate("JAProjektClass", "Nale\305\274y wybra\304\207 plik z rozszerzeniem .bmp. Program obs\305\202uguje jedynie bitmapy 24 bitowe ", nullptr));
+        howManyThreads->setText(QCoreApplication::translate("JAProjektClass", "Sugerowana liczba w\304\205tk\303\263w: ", nullptr));
     } // retranslateUi
 
 };

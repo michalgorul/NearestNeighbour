@@ -63,7 +63,7 @@ OUTER_LOOP:                             ; pêtla zewnêtrzna
     cmp     eax, r8d                    ; porównujê iterator z wartoœci¹ iOut z odpowiadaj¹cej wartoœci danego w¹tka
     jge     OUTER_LOOP_END              ; je¿eli iterator jest wiêkszy lub równy wysokoœci obrazu wyjœciowego to wychodzê z pêtli
 
-    mov     innerIterator, 0            ; zeruje iterator pêtli wewnêtrznej, bêdzie on pod adresem [rbp-8]
+    mov     innerIterator, 0            ; zeruje iterator pêtli wewnêtrznej, bêdzie on zapisany w zmiennej lokalnej innerIterator
 
 INNER_LOOP:                             ; pêtla wewnêtrzna
     mov     eax, innerIterator          ; przepisuje wartoœæ iteratora pêtli wewnêtrznej do rejestru eax

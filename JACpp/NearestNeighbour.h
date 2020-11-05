@@ -1,7 +1,7 @@
 //; Temat: Algorytm zmniejszaj¹cy zdjêcie
 //;
-//; Opis: Algorytm najbli¿szego s¹siedzta(ang.Nearest Neighbour) jest najprostszym algorytmem zmiany wielkoœci obrazu
-//;       (ang.resampling).Ka¿dy piksel obrazu wynikowego przyjmuje niezmodyfikowan¹ wartoœæ piskla obrazu wejœciowego
+//; Opis: Algorytm najbli¿szego s¹siedztwa(ang.Nearest Neighbour) jest najprostszym algorytmem zmiany wielkoœci obrazu
+//;       (ang.resampling).Ka¿dy piksel obrazu wynikowego przyjmuje niezmodyfikowan¹ wartoœæ piksela obrazu wejœciowego
 //		   po³o¿onego najbli¿ej aktualnie rozpatrywanego punktu.
 //;
 //; Micha³ Góral semestr 5 rok 2020 / 2021

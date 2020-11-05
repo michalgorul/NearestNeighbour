@@ -1,11 +1,15 @@
-#include "JAProjekt.h"
+﻿#include "JAProjekt.h"
 #include  "Bitmap.h"
-#include "math.h"
 
 JAProjekt::JAProjekt(QWidget* parent)
     : QWidget(parent)
 {
     ui.setupUi(this);
+	unsigned int n = std::thread::hardware_concurrency();
+	std::string threads = "Sugerowana liczba w\304\205tk\303\263w: " + std::to_string(n);
+
+	ui.howManyThreads->setText(QString::fromStdString(threads));
+	ui.threadsSpinBox->setValue(n);
 	
     connect(ui.fileInButton, &QPushButton::clicked, this, &JAProjekt::onFileInButtonClicked);
     connect(ui.fileOutButton, &QPushButton::clicked, this, &JAProjekt::onFileOutButtonClicked);
@@ -31,10 +35,10 @@ void JAProjekt::updatePaths()
 
 void JAProjekt::getScaleAndThreads()
 {
-	QString scaleXQString = ui.lineEditX->text();
+	QString scaleXQString = ui.scaleXSpinBox->text();
 	scaleX = scaleXQString.toInt();
 
-	QString scaleYQString = ui.lineEditY->text();
+	QString scaleYQString = ui.scaleYSpinBox->text();
 	scaleY = scaleYQString.toInt();
 
 	QString threadsQString = ui.threadsSpinBox->text();
@@ -65,7 +69,7 @@ void JAProjekt::onFileInButtonClicked()
 
 void JAProjekt::onFileOutButtonClicked()
 {
-	fileOutPath = QFileDialog::getOpenFileName(this, "Wybieranie pliku wyjsciowego", QDir::currentPath(), filter);
+	fileOutPath = QFileDialog::getSaveFileName(this, "Wybieranie pliku wyjsciowego", QDir::currentPath(), filter);
 	ui.fileOutlineEdit->setText(fileOutPath);
 
 	updatePaths();
@@ -88,33 +92,31 @@ void JAProjekt::onMakeButtonClicked()
 		
 		Bitmap bmp(fileInPathString);
 
-
-		if (bmp.bmpInfoHeader.bit_count == 24)
+		if(!bmp.tooBig)
 		{
-			bmp.asmOrCpp = ui.radioButtonCpp->isChecked();
-
-			if(bmp.write(fileOutPathString, scaleX, scaleY, bmp.asmOrCpp, threads))
+			if (bmp.bmpInfoHeader.bit_count == 24)
 			{
-				double timeTaken = 0.0;
+				bmp.asmOrCpp = ui.radioButtonCpp->isChecked();
 
-				if (bmp.asmOrCpp == true)
-					timeTaken = std::chrono::duration_cast<std::chrono::microseconds>(bmp.endCpp - bmp.beginCpp).count();
+				if (bmp.write(fileOutPathString, scaleX, scaleY, bmp.asmOrCpp, threads))
+				{
+					time = QString::number(bmp.time);
+
+					QMessageBox::information(this, "Success", Q("Udało się!"));
+				}
 				else
-					timeTaken = std::chrono::duration_cast<std::chrono::microseconds>(bmp.endAsm - bmp.beginAsm).count();
-
-				timeTaken = timeTaken / 1000000.0;
-				time = QString::number(timeTaken);
+					QMessageBox::warning(this, "Warning", Q("Za duży plik wynikowy! Proszę zmniejszyć skalę"));
 			}
 			else
-				QMessageBox::warning(this, "Warning", "Za duzy plik wynikowy! Prosze zmniejszyc skale");
+				QMessageBox::warning(this, "Warning", Q("Należy wybrać bitmapę 24 bitową"));
 		}
 		else
-			QMessageBox::warning(this, "Warning", "Nalezy wybrac bitmape 24 bitowa");
+			QMessageBox::warning(this, "Warning", Q("Za duży plik wejściowy! Proszę wybrać inny plik"));
 	}
 	else
-		QMessageBox::warning(this, "Warning", "Nalezy wybrac plik z rozszerzeniem .bmp !");
+		QMessageBox::warning(this, "Warning", Q("Należy wybrać plik z rozszerzeniem .bmp !"));
 	
-	ui.lineEditTime->setText(time + " sekundy");
+	ui.lineEditTime->setText(time + " sekundy");	//setting time in GUI
 }
 
 std::string lastN(std::string input, int n)

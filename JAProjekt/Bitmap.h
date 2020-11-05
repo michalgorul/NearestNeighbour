@@ -6,15 +6,16 @@
 #include <chrono>
 #include <Windows.h>
 #include <thread>
+#include <ctgmath>
 
 struct Parameters
 {
-    int32_t widthIn;
-    int32_t heightIn;
-    int32_t widthOut;
-    int32_t heightOut;
-    unsigned char* dataIn;
-    unsigned char* dataOut;
+    int32_t widthIn;        // width of input bitmap in pixels
+    int32_t heightIn;       // height of input bitmap in pixels
+    int32_t widthOut;       // width of output bitmap in pixels
+    int32_t heightOut;      // height of output bitmap in pixels
+    unsigned char* dataIn;  // address of first element of input bitmap
+    unsigned char* dataOut; // address of first element of output bitmap
 
     Parameters(int32_t widthIn, int32_t heightIn, int32_t widthOut, int32_t heightOut, unsigned char* dataIn,
         unsigned char* dataOut) : widthIn(widthIn), heightIn(heightIn), widthOut(widthOut), heightOut(heightOut), dataIn(dataIn),
@@ -38,8 +39,8 @@ struct BMPFileHeader {
 
 struct BMPInfoHeader {
     uint32_t size{ 0 };                      // Size of this header (in bytes)
-    int32_t width{ 0 };                      // width of bitmap in pixels
-    int32_t height{ 0 };                     // width of bitmap in pixels
+    uint32_t width{ 0 };                      // width of bitmap in pixels
+    uint32_t height{ 0 };                     // height of bitmap in pixels
                                              //       (if positive, bottom-up, with origin in lower left corner)
                                              //       (if negative, top-down, with origin in upper left corner)
     uint16_t planes{ 1 };                    // No. of planes for the target device, this is always 1
@@ -52,15 +53,6 @@ struct BMPInfoHeader {
     uint32_t colors_important{ 0 };          // No. of colors used for displaying the bitmap. If 0 all colors are required
 };
 
-struct BMPColorHeader
-{
-    uint32_t red_mask{ 0x00ff0000 };         // Bit mask for the red channel
-    uint32_t green_mask{ 0x0000ff00 };       // Bit mask for the green channel
-    uint32_t blue_mask{ 0x000000ff };        // Bit mask for the blue channel
-    uint32_t alpha_mask{ 0xff000000 };       // Bit mask for the alpha channel
-    uint32_t color_space_type{ 0x73524742 }; // Default "sRGB" (0x73524742)
-    uint32_t unused[16]{ 0 };                // Unused data for sRGB color space
-};
 #pragma pack(pop)
 
 
@@ -75,29 +67,26 @@ public:
 
     BMPFileHeader fileHeader;
     BMPInfoHeader bmpInfoHeader;
-    BMPColorHeader bmpColorHeader;
     std::vector<uint8_t> data;  //information about pixmap in input file
 
 	BMPFileHeader fileHeaderOut;
     BMPInfoHeader bmpInfoHeaderOut;
-    BMPColorHeader bmpColorHeaderOut;
     std::vector<uint8_t> dataOut;    //information about pixmap in output file
 	
     bool ifFileInChoosen;
     bool ifFileOutChoosen;
     bool asmOrCpp;          // true - C++, false - ASM
+    bool tooBig;            // variable that informs if file is too big
 
-    std::chrono::high_resolution_clock::time_point beginCpp;
-    std::chrono::high_resolution_clock::time_point beginAsm;
-    std::chrono::high_resolution_clock::time_point endCpp;
-    std::chrono::high_resolution_clock::time_point endAsm;
-
+    double PCFreq = 0.0;
+    __int64 counterStart = 0;
+	
     /// <summary>Function responsible for reading source file and putting information to structures</summary>
-	/// <param name="fname">Name of source file</param>
+	/// <param name="fname">Name of source file, max file size: 510MB</param>
     void read(std::string fname);
 
     /// <summary>Function writes data to output file and saves it</summary>
-	/// <param name="fname">Name of new file</param>
+	/// <param name="fname">Name of new file, max file size: 510MB</param>
 	/// <param name="scaleX">Width scale od new file</param>
 	/// <param name="scaleY">Height scale od new file</param>
 	/// <param name="scaleY">This parameter says if user chose ASM or C++ DLL library</param>
@@ -113,7 +102,13 @@ public:
     bool setHeaderOut(unsigned int scaleX, unsigned int scaleY);
 
     /// <summary>Function checks if file is too big</summary>
-    bool checkIfTooBig();
+    bool checkIfTooBig(int32_t width, int32_t height, int16_t pix);
+
+	void startCounter();
+
+	double getCounter();
+
+    double time;
 
 private:
     uint32_t rowStride{ 0 };    //line of pixmap
@@ -129,10 +124,6 @@ private:
     /// <summary>Function adds 1 to the row_stride until it is divisible with align_stride</summary>
     /// <param name="alignStride">Output file</param> 
     uint32_t makeStrideAligned(uint32_t alignStride);
-	
-    /// <summary>Function checks if the pixel data is stored as BGRA and if the color space type is sRGB</summary>
-    /// <param name="bmpColorHeader">Colour header of a .bmp file passed by refference</param> 
-    void checkColorHeader(BMPColorHeader& bmpColorHeader);
 	
     /// <summary>Function responsible for handling both ASM and C++ DLL Library</summary>
     /// <param name="threads">Number of threads chosen by user</param> 

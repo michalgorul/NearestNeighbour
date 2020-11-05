@@ -26,66 +26,49 @@ void Bitmap::read(std::string fname)
 		
 		inp.read((char*)&bmpInfoHeader, sizeof(bmpInfoHeader));
 
-		// The BMPColorHeader is used only for transparent images
-		if (bmpInfoHeader.bit_count == 32) 
+		if (!checkIfTooBig(bmpInfoHeader.width, bmpInfoHeader.height, bmpInfoHeader.bit_count))
 		{
-			// Check if the file has bit mask color information
-			if (bmpInfoHeader.size >= (sizeof(BMPInfoHeader) + sizeof(BMPColorHeader))) 
-			{
-				inp.read((char*)&bmpColorHeader, sizeof(bmpColorHeader));
-				// Check if the pixel data is stored as BGRA and if the color space type is sRGB
-				checkColorHeader(bmpColorHeader);
-			}
-			else 
-			{
-				std::cerr << "Error! The file \"" << fname << "\" does not seem to contain bit mask information\n";
-				throw std::runtime_error("Error! Unrecognized file format.");
-			}
-		}
+			// Jump to the pixel data location
+			inp.seekg(fileHeader.offset_data, inp.beg);
 
-		// Jump to the pixel data location
-		inp.seekg(fileHeader.offset_data, inp.beg);
+			// Adjust the header fields for output.
+			// Some editors will put extra info in the image file, we only save the headers and the data.
 
-		// Adjust the header fields for output.
-		// Some editors will put extra info in the image file, we only save the headers and the data.
-		if (bmpInfoHeader.bit_count == 32) 
-		{
-			bmpInfoHeader.size = sizeof(BMPInfoHeader) + sizeof(BMPColorHeader);
-			fileHeader.offset_data = sizeof(BMPFileHeader) + sizeof(BMPInfoHeader) + sizeof(BMPColorHeader);
-		}
-		else 
-		{
 			bmpInfoHeader.size = sizeof(BMPInfoHeader);
 			fileHeader.offset_data = sizeof(BMPFileHeader) + sizeof(BMPInfoHeader);
-		}
-		//for now file size is header size
-		fileHeader.file_size = fileHeader.offset_data;
+			
+			//for now file size is header size
+			fileHeader.file_size = fileHeader.offset_data;
 
-		if (bmpInfoHeader.height < 0) 
-			throw std::runtime_error("The program can treat only BMP images with the origin in the bottom left corner!");
+			if (bmpInfoHeader.height < 0)
+				throw std::runtime_error("The program can treat only BMP images with the origin in the bottom left corner!");
 
-		data.resize(bmpInfoHeader.width * bmpInfoHeader.height * bmpInfoHeader.bit_count / 8);
+			data.resize(bmpInfoHeader.width * bmpInfoHeader.height * bmpInfoHeader.bit_count / 8);
 
-		// Here we check if we need to take into account row padding
-		if (bmpInfoHeader.width % 4 == 0) 
-		{
-			inp.read((char*)data.data(), data.size());
-			//now file size is right
-			fileHeader.file_size += static_cast<uint32_t>(data.size());
-		}
-		else 
-		{
-			rowStride = bmpInfoHeader.width * bmpInfoHeader.bit_count / 8;
-			uint32_t new_stride = makeStrideAligned(4);
-			std::vector<uint8_t> padding_row(new_stride - rowStride);
-
-			for (int y = 0; y < bmpInfoHeader.height; ++y) 
+			// Here we check if we need to take into account row padding
+			if (bmpInfoHeader.width % 4 == 0)
 			{
-				inp.read((char*)(data.data() + rowStride * y), rowStride);
-				inp.read((char*)padding_row.data(), padding_row.size());
+				inp.read((char*)data.data(), data.size());
+				//now file size is right
+				fileHeader.file_size += static_cast<uint32_t>(data.size());
 			}
-			fileHeader.file_size += static_cast<uint32_t>(data.size()) + bmpInfoHeader.height * static_cast<uint32_t>(padding_row.size());
+			else
+			{
+				rowStride = bmpInfoHeader.width * bmpInfoHeader.bit_count / 8;
+				uint32_t new_stride = makeStrideAligned(4);
+				std::vector<uint8_t> padding_row(new_stride - rowStride);
+
+				for (int y = 0; y < bmpInfoHeader.height; ++y)
+				{
+					inp.read((char*)(data.data() + rowStride * y), rowStride);
+					inp.read((char*)padding_row.data(), padding_row.size());
+				}
+				fileHeader.file_size += static_cast<uint32_t>(data.size()) + bmpInfoHeader.height * static_cast<uint32_t>(padding_row.size());
+			}
+			tooBig = false;
 		}
+		else
+			tooBig = true;
 	}
 	else 
 		throw std::runtime_error("Unable to open the input image file.");
@@ -97,7 +80,6 @@ bool Bitmap::write(std::string fname, unsigned int scaleX, unsigned int scaleY, 
 {
 	fileHeaderOut = fileHeader;
 	bmpInfoHeaderOut = bmpInfoHeader;
-	bmpColorHeaderOut = bmpColorHeader;
 	
 	if(setHeaderOut(scaleX, scaleY))
 	{
@@ -107,11 +89,7 @@ bool Bitmap::write(std::string fname, unsigned int scaleX, unsigned int scaleY, 
 
 		if (of)
 		{
-			if (bmpInfoHeaderOut.bit_count == 32)
-			{
-				writeHeadersAndData(of);
-			}
-			else if (bmpInfoHeaderOut.bit_count == 24)
+			if (bmpInfoHeaderOut.bit_count == 24)
 			{
 				if (bmpInfoHeaderOut.width % 4 == 0)
 				{
@@ -137,9 +115,7 @@ bool Bitmap::write(std::string fname, unsigned int scaleX, unsigned int scaleY, 
 				}
 			}
 			else
-			{
 				throw std::runtime_error("The program can treat only 24 or 32 bits per pixel BMP files");
-			}
 		}
 
 		of.close();
@@ -154,7 +130,7 @@ bool Bitmap::setHeaderOut(unsigned int scaleX, unsigned int scaleY)
 	bmpInfoHeaderOut.width = bmpInfoHeader.width * scaleX / 100.0;
 	bmpInfoHeaderOut.height = bmpInfoHeader.height * scaleY / 100.0;
 
-	if(!checkIfTooBig())
+	if(!checkIfTooBig(bmpInfoHeaderOut.width, bmpInfoHeaderOut.height, bmpInfoHeaderOut.bit_count))
 	{
 		fileHeaderOut.file_size = fileHeaderOut.offset_data;
 
@@ -180,28 +156,32 @@ bool Bitmap::setHeaderOut(unsigned int scaleX, unsigned int scaleY)
 	return false;
 }
 
-bool Bitmap::checkIfTooBig()
+bool Bitmap::checkIfTooBig(int32_t width, int32_t height, int16_t bitCount)
 {
-	if ((bmpInfoHeaderOut.width * bmpInfoHeaderOut.height * bmpInfoHeaderOut.bit_count / 8) < data.max_size())
-		return false;
+	size_t width_bits = log2(width);
+	size_t height_bits = log2(height);
+	size_t pix_bits = log2(bitCount / 8);
 	
-	return true;
+	return !(width_bits + height_bits + pix_bits < 28);
 }
 
-void Bitmap::checkColorHeader(BMPColorHeader& bmpColorHeader)
+void Bitmap::startCounter()
 {
-	BMPColorHeader expected_color_header;
-	if (expected_color_header.red_mask != bmpColorHeader.red_mask ||
-		expected_color_header.blue_mask != bmpColorHeader.blue_mask ||
-		expected_color_header.green_mask != bmpColorHeader.green_mask ||
-		expected_color_header.alpha_mask != bmpColorHeader.alpha_mask) 
-	{
-		throw std::runtime_error("Unexpected color mask format! The program expects the pixel data to be in the BGRA format");
-	}
-	if (expected_color_header.color_space_type != bmpColorHeader.color_space_type) 
-	{
-		throw std::runtime_error("Unexpected color space type! The program expects sRGB values");
-	}
+	LARGE_INTEGER li;
+	if (!QueryPerformanceFrequency(&li))
+		std::cout << "QueryPerformanceFrequency failed!\n";
+
+	PCFreq = double(li.QuadPart)/* / 1000.0*/;
+
+	QueryPerformanceCounter(&li);
+	counterStart = li.QuadPart;
+}
+
+double Bitmap::getCounter()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	return double(li.QuadPart - counterStart) / PCFreq;
 }
 
 void Bitmap::nearestNeighbourHandling(unsigned int threads)
@@ -220,28 +200,28 @@ void Bitmap::nearestNeighbourHandling(unsigned int threads)
 
 	if (this->asmOrCpp == 1) // czyli pod³¹czam biblioteke cpp
 	{
-		HMODULE hModule = LoadLibrary(TEXT("C:\\Users\\Micha³\\source\\repos\\JAProjekt\\x64\\Debug\\JACpp.dll"));
+		HMODULE hModule = LoadLibrary(TEXT("JACpp.dll"));
 		FunNNCpp nearestNeighbourCpp = (FunNNCpp)GetProcAddress(hModule, "nearestNeighbourCpp");
 
-		beginCpp = std::chrono::high_resolution_clock::now();
+		startCounter();
 
 		threadsHandlingCpp(nearestNeighbourCpp, &params, threads);
-
-		endCpp = std::chrono::high_resolution_clock::now();
+		
+		time = getCounter();
 
 		FreeLibrary(hModule);
 
 	}
 	else //czyli pod³¹czam biblioteke asm
 	{		
-		HMODULE hModule = LoadLibrary(TEXT("C:\\Users\\Micha³\\source\\repos\\JAProjekt\\x64\\Debug\\JAAsm.dll"));
+		HMODULE hModule = LoadLibrary(TEXT("JAAsm.dll"));
 		FunNNAsm nearestNeighbourAsm = (FunNNAsm)GetProcAddress(hModule, "nearestNeighbourAsm");
 
-		beginAsm = std::chrono::high_resolution_clock::now();
-
+		startCounter();
+		
 		threadsHandlingAsm(nearestNeighbourAsm, &params, threads);
 
-		endAsm = std::chrono::high_resolution_clock::now();
+		time = getCounter();
 
 		FreeLibrary(hModule);
 	}
@@ -316,9 +296,6 @@ void Bitmap::writeHeaders(std::ofstream& of)
 {
 	of.write((const char*)&fileHeaderOut, sizeof(fileHeaderOut));
 	of.write((const char*)&bmpInfoHeaderOut, sizeof(bmpInfoHeaderOut));
-	
-	if (bmpInfoHeaderOut.bit_count == 32) 
-		of.write((const char*)&bmpColorHeaderOut, sizeof(bmpColorHeaderOut));
 }
 
 void Bitmap::writeHeadersAndData(std::ofstream& of)
