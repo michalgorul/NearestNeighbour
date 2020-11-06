@@ -1,39 +1,78 @@
-; Temat: Algorytm zmniejszaj¹cy zdjêcie
+;
+; Temat: Algorytm najbli¿szego s¹siedztwa zmieniaj¹cy wielkoœæ zdjêcia
 ;
 ; Opis: Algorytm najbli¿szego s¹siedzta (ang. Nearest Neighbour) jest najprostszym algorytmem zmiany wielkoœci obrazu
-;       (ang. resampling). Ka¿dy piksel obrazu wynikowego przyjmuje niezmodyfikowan¹ wartoœæ piskla obrazu wejœciowego 
+;       (ang. resampling). Ka¿dy piksel obrazu wynikowego przyjmuje niezmodyfikowan¹ wartoœæ piksela obrazu wejœciowego 
 ;        po³o¿onego najbli¿ej aktualnie rozpatrywanego punktu.
 ;
-; Micha³ Góral semestr 5 rok 2020/2021
+; Autor: Micha³ Góral semestr 5 rok 2020/2021
+;
+; Historia zmian:
+;
+; Wersja: 0.1
+;   dodane zmienne lokalne
+;
+; Wersja: 0.2
+;   dodane obliczanie skali poziomej i pionowej oraz zapis tych wartoœci do zmiennyh lokalnych
+;
+; Wersja: 0.3
+;   pocz¹tki tworzenia dwóch pêtli
+;
+; Wersja: 0.4
+;   poprawne dzia³anie pêtli
+;
+; Wersja: 0.5
+;   pocz¹tki obliczania indeksów obrazów wejœciowego i wyjœciowego
+;
+; Wersja: 0.6
+;   obliczanie indeksów dzia³¹ poprawnie
+;
+; Wersja: 0.7
+;   przypisane wartoœci piksela obrazu wejœciowego po³o¿onego najbli¿ej aktualnie rozpatrywanego punktu w obrazie
+;   wyjœciowym dzia³¹ poprawnie.
+;
+; Wersja: 0.8
+;   przyst¹pienie do obs³ugi w¹tków
+;
+; Wersja: 0.9
+;   obs³uga w¹tków dzia³a poprawnie
 ;
 ; Wersja: 1.0
+;   wersja w pe³ni dzia³aj¹ca
+
+.data
 
 .code
 
-; w tej procedurze bêdê korzysta³ z rejestrów: eax, edx, rax, rbp, , r8, r10, r11
+; Parametry wejœciowe:
+;   do procedury przekazujê strukturê(adres na jej pierwszy element) z potrzebnymi parametrametrami oraz dwa inty potrzebne do obs³ugi w¹tków
+;   pierwszy parametr funkcji zapisywany jest w rejestrze rcx 
+;   drugi parametr funkcji zapisywany jest w rejestrze rdx, jest to wartoœæ iIn, mniejsze od heightOut i wiêksze od 0
+;   trzeci parametr funkcji zapisywany jest w rejestrze r8, jest to wartoœæ iOut, mniejsze od heightOut i wiêksze od 0
+;   wartoœæ DWORD PTR [rcx] to serokoœæ obrazu wejœciowego, widthIn
+;   wartoœæ DWORD PTR [rcx+4] to wysokoœæ obrazu wejœciowego, heightIn
+;   wartoœæ DWORD PTR [rcx+8] to serokoœæ obrazu wejœciowego, widthOut
+;   wartoœæ DWORD PTR [rcx+12] to wysokoœæ obrazu wejœciowego, heightOut
+;   wartoœæ QWORD PTR [rcx+16] to adres na pierwszy element obrazu wejœciowego, dataIn
+;   wartoœæ QWORD PTR [rcx+24] to adres na pierwszy element obrazu wyjœciowego, dataOut
+;
+; Parametry wyjœciowe:
+;   procedura zamienia wartoœci w odpowiednich miejscach pamiêci i nic nie zwraca
+;
+; Zniszczone rejestry:
+;   eax, edx, rax, r10, r11
 
 nearestNeighbourAsm proc 
 
-    ; do procedury przekazujê strukturê(adres na jej pierwszy element) z potrzebnymi parametrametrami oraz dwa inty potrzebne do obs³ugi w¹tków
-    ; pierwszy parametr funkcji zapisywany jest w rejestrze rcx 
-    ; drugi parametr funkcji zapisywany jest w rejestrze rdx, jest to wartoœæ iIn
-    ; trzeci parametr funkcji zapisywany jest w rejestrze r8, jest to wartoœæ iOut
-    ; wartoœæ DWORD PTR [rcx] to serokoœæ obrazu wejœciowego, widthIn
-    ; wartoœæ DWORD PTR [rcx+4] to wysokoœæ obrazu wejœciowego, heightIn
-    ; wartoœæ DWORD PTR [rcx+8] to serokoœæ obrazu wejœciowego, widthOut
-    ; wartoœæ DWORD PTR [rcx+12] to wysokoœæ obrazu wejœciowego, heightOut
-    ; wartoœæ QWORD PTR [rcx+16] to adres na pierwszy element obrazu wejœciowego, dataIn
-    ; wartoœæ QWORD PTR [rcx+24] to adres na pierwszy element obrazu wyjœciowego, dataOut
-
     ; zmienne lokalne s¹ przechowywane na stosie
     LOCAL ratioX: REAL4	            ; w tej zmiennej lokalnej bêdê przechowywa³ stosunek X (float)
-    LOCAL ratioY: REAL4	            ; w tej zmiennej lokalnej bêdê przechowywa³ stosunek X (float)
+    LOCAL ratioY: REAL4	            ; w tej zmiennej lokalnej bêdê przechowywa³ stosunek Y (float)
     LOCAL indexSource: DWORD        ; w tej zmiennej lokalnej bêdê przechowywa³ indeks pliku wejœciowego (int)
     LOCAL indexOut: DWORD           ; w tej zmiennej lokalnej bêdê przechowywa³ indeks pliku wyjœciowego (int)
     LOCAL outerIterator: DWORD      ; w tej zmiennej lokalnej bêdê przechowywa³ iterator po pêtli zewnêtrznej (int)
     LOCAL innerIterator: DWORD      ; w tej zmiennej lokalnej bêdê przechowywa³ iterator po pêtli wewnêtrznej (int)
 
-    push    rbp                     ; odk³adam na stosie wartoœæ rejestru rbp (bêdê go u¿ywa³ do okreœlenia pocz¹tku stosu)
+    push    rbp                     ; odk³adam na stosie wartoœæ rejestru rbp 
     mov     rbp, rsp                ; nadpisuje wartoœæ rbp obecn¹ wartoœci¹ rsp (wartoœæ wskaŸnika stosu)
 
     ; bêdê teraz oblicza³ ratioX
